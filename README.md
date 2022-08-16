@@ -63,6 +63,7 @@ helm upgrade --install ingress-nginx ingress-nginx \
 Since we are using Ingress controller to route the traffic , we will need to get the public ip adress of our ingress.
 With the public ip , we would be able to update the deployment of the ingress for :
 * hipstershop
+* grafana
 ```
 IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -ojson | jq -j '.status.loadBalancer.ingress[].ip')
 ```
