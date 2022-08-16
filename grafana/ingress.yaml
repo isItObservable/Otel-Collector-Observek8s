@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host : "grafana.IP_TO_REPLACE.nip.io"
+    - host : "grafana.34.159.144.147.nip.io"
       http:
         paths:
           - pathType: ImplementationSpecific
