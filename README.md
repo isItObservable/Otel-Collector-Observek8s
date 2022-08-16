@@ -196,10 +196,9 @@ spec:
 ```
 kubectl apply -f grafana/ingress.yaml
 ```
-#### 3. Get The Prometheus service
+#### 3. Deploy PodMonitor to scrape the produced metrics
 ```
-PROMETHEUS_SERVER=$(kubectl get svc -l app=kube-prometheus-stack-prometheus -o jsonpath="{.items[0].metadata.name}")
-sed -i "s,PROMETHEUS_SERVER,$PROMETHEUS_SERVER," otelemetry/openTelemetry.yaml
+kubectl apply -f grafana/ingress.yaml
 ```
 
 ### 8. Deploy Loki without any log agents

@@ -301,7 +301,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host :  "collector.34.159.144.147.nip.io"
+    - host :  "collector.IP_TO_REPLACE.nip.io"
       http:
         paths:
           - pathType: ImplementationSpecific
@@ -779,7 +779,7 @@ spec:
               args: ["-u", "50", "-d", "55m"]
               env:
                 - name: FRONTEND_ADDR
-                  value: "collector.34.159.144.147.nip.io"
+                  value: "collector.IP_TO_REPLACE.nip.io"
               resources:
                 requests:
                   cpu: 300m
