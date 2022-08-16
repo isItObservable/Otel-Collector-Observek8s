@@ -1,0 +1,113 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: simplest
+spec:
+  image: otel/opentelemetry-collector-contrib-dev:latest
+  serviceAccount: otelcontribcol
+  mode: daemonset
+  hostNetwork: true
+  env:
+    - name: K8S_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+  config: |
+    receivers:
+      hostmetrics:
+          collection_interval: 30s
+          scrapers:
+            cpu:
+            memory:
+            load:
+              cpu_average: true
+
+      k8s_cluster:
+        collection_interval: 10s
+        node_conditions_to_report: [Ready, MemoryPressure,DiskPressure,NetworkUnavailable]
+        allocatable_types_to_report: [cpu, memory,storage]
+      k8s_events:
+        auth_type : "serviceAccount"
+      kubeletstats:
+        rule: type == "k8s.node"
+        config:
+          collection_interval: 10s
+          auth_type: "serviceAccount"
+          endpoint: "`endpoint`:`kubelet_endpoint_port`"
+          insecure_skip_verify: true
+          extra_metadata_labels:
+            - container.id
+            - k8s.volume.type
+          metric_groups:
+            - node
+            - pod
+            - volume
+            - container
+    processors:
+      batch:
+        send_batch_max_size: 1000
+        timeout: 30s
+        send_batch_size : 800
+
+      memory_limiter:
+         check_interval: 1s
+         limit_percentage: 70
+         spike_limit_percentage: 30
+
+      metricstransform:
+        transforms:
+           include: .+
+           match_type: regexp
+           action: update
+           operations:
+             - action: add_label
+               new_label: dt.kubernetes.cluster.id
+               new_value: CLUSTER_ID_TO_REPLACE
+             - action: add_label
+               new_label: dt.kubernetes.name
+               new_value: CLUSTER_NAME_TO_REPLACE
+      resourcedetection/gce:
+        detectors: [env, gce]
+        timeout: 2s
+        override: true
+      k8sattributes:
+        auth_type: "serviceAccount"
+        passthrough: false
+        filter:
+          node_from_env_var: K8S_NODE_NAME
+        extract:
+          metadata:
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.deployment.name
+            - k8s.namespace.name
+            - k8s.node.name
+            - k8s.pod.start_time
+    exporters:
+      prometheusremotewrite:
+        endpoint: "https://PROMETHEUS_SERVER:7900/api/v1/push"
+        resource_to_telemetry_conversion:
+           enabled: true
+      logging:
+        loglevel: debug
+      loki:
+         endpoint: http://LOKI_TO_REPLACE:3100/loki/api/v1/push
+    extensions:
+      memory_ballast:
+        size_in_percentage: 20
+      k8s_observer:
+        auth_type: serviceAccount
+        node: ${K8S_NODE_NAME}
+        observe_pods: true
+        observe_nodes: true
+    service:
+      extensions: [k8s_observer,memory_ballast]
+      pipelines:
+        logs:
+          receivers: [k8s_events]
+          processors: [memory_limiter,batch]
+          exporters: [loki]
+        metrics:
+          receivers: [k8s_cluster,kubeletstats]
+          processors: [memory_limiter,metricstransform,k8sattributes,resourcedetection/gce,batch]
+          exporters: [prometheusremotewrite]
